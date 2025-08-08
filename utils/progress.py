@@ -11,5 +11,7 @@ def load_progress():
 
 
 def save_progress(progress):
+    sorted_progress = {str(k): v for k, v in sorted(progress.items(), key=lambda item: int(item[0]))}
+
     with open(PROGRESS_FILE, 'w') as f:
-        json.dump(progress, f, indent=2)
+        json.dump(sorted_progress, f, indent=2)

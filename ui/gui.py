@@ -38,5 +38,13 @@ class QuestTracker(tk.Tk):
         save_settings(self.zone_filter_var.get(), self.class_var.get(), self.faction_var.get())
 
     def save(self):
-        progress = { qid: var.get() for qid, var in self.checkbox_vars.items() if var.get() }
-        save_progress(progress)
+        progress = load_progress()
+
+        for qid, var in self.checkbox_vars.items():
+            if var.get():
+                progress[qid] = True
+            else:
+                progress.pop(qid, None)
+
+        sorted_progress = { str(k): v for k, v in sorted(progress.items(), key=lambda item: int(item[0])) }
+        save_progress(sorted_progress)
