@@ -11,7 +11,14 @@ def load_progress():
 
 
 def save_progress(progress):
-    sorted_progress = {str(k): v for k, v in sorted(progress.items(), key=lambda item: int(item[0]))}
+    try:
+        sorted_items = sorted(progress.items(), key=lambda item: int(item[0]))
+    except (ValueError, TypeError):
+        items = [(str(k), v) for k, v in progress.items()]
+        sorted_items = sorted(items, key=lambda item: int(item[0]) if item[0].isdigit() else item[0])
 
-    with open(PROGRESS_FILE, 'w') as f:
+    sorted_progress = { str(k): v for k, v in sorted_items }
+    os.makedirs(os.path.dirname(PROGRESS_FILE), exist_ok=True)
+
+    with open(PROGRESS_FILE, "w") as f:
         json.dump(sorted_progress, f, indent=2)

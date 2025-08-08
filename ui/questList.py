@@ -15,7 +15,6 @@ def quest_list(app):
 
     for quest in app.quests:
         zone = quest.get("zone_name") or "Unknown Zone"
-        quest_id = str(quest["id"])
         required_classes = quest.get("RequiredClasses", 0)
         side = quest.get("side", "Neutral")
 

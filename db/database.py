@@ -1,8 +1,12 @@
 import mysql.connector
 import os
+import logging
 from configs.config import ALLIANCE_FACTIONS, HORDE_FACTIONS
-from db.searches import (fetch_quests_data, fetch_creature_factions, fetch_object_factions)
+from db.searches import fetch_quests_data, fetch_creature_factions, fetch_object_factions, get_character_guid, get_active_quests, get_completed_quests
 from dotenv import load_dotenv
+from mysql.connector import Error
+
+logger = logging.getLogger(__name__)
 
 
 def get_faction_side(reputation_ids: set) -> str:
@@ -18,13 +22,13 @@ def get_faction_side(reputation_ids: set) -> str:
 
 def fetch_quests(faction_filter: str = None):
     load_dotenv()
-    conn = mysql.connector.connect(host=os.getenv('DB_HOST'), port=int(os.getenv('DB_PORT')), user=os.getenv('DB_USER'), password=os.getenv('DB_PASS'), database=os.getenv('DB_NAME'))
-    cursor = conn.cursor(dictionary=True)
+    wconn = mysql.connector.connect(host=os.getenv('DB_HOST'), port=int(os.getenv('DB_PORT')), user=os.getenv('DB_USER'), password=os.getenv('DB_PASS'), database=os.getenv('DB_WORLDNAME'))
+    cursor = wconn.cursor(dictionary=True)
     quests_data = fetch_quests_data(cursor)
     creature_factions = fetch_creature_factions(cursor)
     object_factions = fetch_object_factions(cursor)
     cursor.close()
-    conn.close()
+    wconn.close()
 
     quests = []
     for q in quests_data:
@@ -43,3 +47,36 @@ def fetch_quests(faction_filter: str = None):
             quests.append(q)
 
     return quests
+
+
+def fetch_character_quests_by_name(char_name):
+    cconn = None
+    try:
+        cconn = mysql.connector.connect(host=os.getenv('DB_HOST'), port=int(os.getenv('DB_PORT')), user=os.getenv('DB_USER'), password=os.getenv('DB_PASS'), database=os.getenv('DB_CHARNAME'))
+
+        cursor = cconn.cursor()
+
+        guid = get_character_guid(cursor, char_name)
+        if not guid:
+            return set()
+
+        quests = set()
+
+        try:
+            quests.update(get_active_quests(cursor, guid))
+        except Error:
+            pass
+
+        try:
+            quests.update(get_completed_quests(cursor, guid))
+        except Error:
+            pass
+
+        return quests
+
+    except Error as e:
+        print(f"MySQL error: {e}")
+        return set()
+    finally:
+        if cconn is not None and cconn.is_connected():
+            cconn.close()
