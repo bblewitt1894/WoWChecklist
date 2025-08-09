@@ -1,5 +1,6 @@
 import tkinter as tk
 import threading
+import platform
 from db.database import fetch_quests, fetch_character_quests_by_name
 from utils.progress import load_progress, save_progress
 from ui.questList import quest_list
@@ -7,19 +8,22 @@ from ui.build import build
 from utils.settings import save_settings, load_settings
 from tkinter import messagebox
 
+os_name = platform.system()
 
 class QuestTracker(tk.Tk):
     AUTO_REFRESH_MS = 5 * 60 * 1000
 
     def __init__(self):
         super().__init__()
+
+        if os_name == "Windows":
+            self.iconbitmap("images/icon.ico")
+        else:
+            icon_img = tk.PhotoImage(file="images/icon.png")
+            self.iconphoto(True, icon_img)
+
         self.title("WoW Quest Tracker")
         self.geometry("700x600")
-        self.search_entry = None
-        self.canvas = None
-        self.scrollbar = None
-        self.scroll_frame = None
-        self.zone_filter_dropdown = None
 
         saved_settings = load_settings()
         saved_class = saved_settings.get("class", "Warrior")
@@ -27,7 +31,7 @@ class QuestTracker(tk.Tk):
         saved_zone = saved_settings.get("zone", "All")
 
         self.progress = load_progress()
-        self.checkbox_vars = { }
+        self.checkbox_vars = {}
         self.class_var = tk.StringVar(value=saved_class)
         self.faction_var = tk.StringVar(value=saved_faction)
         self.zone_filter_var = tk.StringVar(value=saved_zone)
@@ -40,13 +44,13 @@ class QuestTracker(tk.Tk):
         build(self)
 
         sync_frame = tk.Frame(self)
-        sync_frame.pack(fill=tk.X, padx=6, pady=6) # type: ignore[arg-type]
+        sync_frame.pack(fill=tk.X, padx=6, pady=6)  # type: ignore[arg-type]
 
-        tk.Label(sync_frame, text="Character name:").pack(side=tk.LEFT) # type: ignore[arg-type]
+        tk.Label(sync_frame, text="Character name:").pack(side=tk.LEFT)  # type: ignore[arg-type]
         char_entry = tk.Entry(sync_frame, textvariable=self.sync_char_name_var)
-        char_entry.pack(side=tk.LEFT, padx=(6, 6)) # type: ignore[arg-type]
+        char_entry.pack(side=tk.LEFT, padx=(6, 6))  # type: ignore[arg-type]
         sync_btn = tk.Button(sync_frame, text="Sync", command=self.on_sync_button)
-        sync_btn.pack(side=tk.LEFT) # type: ignore[arg-type]
+        sync_btn.pack(side=tk.LEFT)  # type: ignore[arg-type]
 
     def on_sync_button(self):
         name = self.sync_char_name_var.get().strip()
@@ -63,17 +67,14 @@ class QuestTracker(tk.Tk):
             quest_ids = set()
 
         if not quest_ids:
-            self.after(0, lambda: messagebox.showinfo("No quests", f"No quests found for {character_name}")) # type: ignore[arg-type]
+            self.after(0, lambda: messagebox.showinfo("No quests", f"No quests found for {character_name}"))  # type: ignore[arg-type]
             return
 
-        progress = load_progress()
-
-        for qid in quest_ids:
-            progress[str(qid)] = True
+        progress = { str(qid): True for qid in quest_ids }
 
         save_progress(progress)
 
-        self.after(0, self.reload_after_sync) # type: ignore[arg-type]
+        self.after(0, self.reload_after_sync)  # type: ignore[arg-type]
 
     def reload_after_sync(self):
         self.progress = load_progress()
@@ -85,7 +86,7 @@ class QuestTracker(tk.Tk):
         if name:
             threading.Thread(target=self._auto_sync_background, args=(name,), daemon=True).start()
 
-        self.after(self.AUTO_REFRESH_MS, self.auto_refresh_check) # type: ignore[arg-type]
+        self.after(self.AUTO_REFRESH_MS, self.auto_refresh_check)  # type: ignore[arg-type]
 
     def _auto_sync_background(self, name):
         try:
@@ -97,12 +98,10 @@ class QuestTracker(tk.Tk):
         if not quest_ids:
             return
 
-        progress = load_progress()
-        for qid in quest_ids:
-            progress[str(qid)] = True
+        progress = { str(qid): True for qid in quest_ids }
         save_progress(progress)
 
-        self.after(0, lambda: (setattr(self, "progress", load_progress()), self.update_quest_list())) # type: ignore[arg-type]
+        self.after(0, lambda: (setattr(self, "progress", load_progress()), self.update_quest_list()))  # type: ignore[arg-type]
 
     def update_quest_list(self):
         quest_list(self)
